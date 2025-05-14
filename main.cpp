@@ -97,30 +97,7 @@ int main(int argc, char ** argv)
     }
 	
 	
-	//------------------DEBUGGING---------------------
-	
-	 // Print each element’s address, prev, symbol, next
-     for (int i = 0; i < sequence_size; ++i) {
-     std::cout << "Node[" << i << "] " 
-                   << " | symbol=" << (char) sequence[i].symbol
-               << " | prev="
-               << (sequence[i].prev
-                        ? std::to_string(sequence[i].prev->pos)
-                        : std::string("null"))
-               << " | next="
-               << (sequence[i].next
-                       ? std::to_string(sequence[i].next->pos)
-                       : std::string("null"))
-               << '\n';
-    }
-	
-	
-	//read input
-	
-	
-	//encode characters into numbers (so we could add phases) -> unnecessary if assuming chars
-	//construct array of sequence nodes 
-	//construct hash table
+
 	//construct priority queue
 	
 	//for first_bucket in priority_queue:

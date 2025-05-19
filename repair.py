@@ -7,7 +7,7 @@
 #!jupyter nbconvert --to='script' repair.ipynb
 
 
-# In[107]:
+# In[1]:
 
 
 def string_to_symbol_list(string):
@@ -24,7 +24,8 @@ def string_to_symbol_list(string):
     return (symbol_list, char_to_symbol_dict)
 
 
-# In[108]:
+# In[2]:
+
 
 #assuming sequence goes left to right 
 class KTupleInfo:
@@ -107,7 +108,7 @@ def construct_active_k_tuples_and_sequence(symbol_list, k):
     return sequence, active_k_tuples
 
 
-# In[109]:
+# In[3]:
 
 
 # we use a dict based on priorities to manage priority queue
@@ -125,7 +126,7 @@ def construct_priority_queue(active_k_tuples):
     return priority_queue
 
 
-# In[116]:
+# In[18]:
 
 
 def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, new_symbol,k):
@@ -155,58 +156,58 @@ def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, n
     # assumming sequence = ... A B C D ... 
     # where (B, C) is the pair to be replaced
     # i_X means the index of X
-    
+
     i_C = active_k_tuples[k_tuple].last
     while i_C != -1:
         #------------------replace single pair------------------
-        
+
         C = sequence[i_C]
         B = sequence[get_prev_index(C)]
-        
+
         i_A = get_prev_index(B)
         i_D = get_next_index(C)
-        
+
         i_C = C.prev_k_tuple
-        
+
         #update counts in active_k_tuples - decrement old
         active_k_tuples[(B.symbol, C.symbol)].count -= 1
         if i_A != -1:
-            active_k_tuples[(A.symbol, B.symbol)].count -=1
+            active_k_tuples[(sequence[i_A].symbol, B.symbol)].count -=1
         if i_D != -1:
-            active_k_tuples[(C.symbol, D.symbol)].count -=1
-            
+            active_k_tuples[(C.symbol, sequence[i_D].symbol)].count -=1
+
         #update counts in active_k_tuples - increment new
         if i_A != -1:
-            if (A.symbol, new_symbol) not in active_k_tuples:
-                active_k_tuples[(A.symbol, new_symbol)] = KTupleInfo()
-            active_k_tuples[(A.symbol, new_symbol)].count +=1
+            if (sequence[i_A].symbol, new_symbol) not in active_k_tuples:
+                active_k_tuples[(sequence[i_A].symbol, new_symbol)] = KTupleInfo()
+            active_k_tuples[(sequence[i_A].symbol, new_symbol)].count +=1
         if i_D != -1:
-            if (new_symbol, D.symbol) not in active_k_tuples:
-                active_k_tuples[(new_symbol, D.symbol)] = KTupleInfo()
-            active_k_tuples[(new_symbol, D.symbol)].count +=1
-        
-        
+            if (new_symbol, sequence[i_D].symbol) not in active_k_tuples:
+                active_k_tuples[(new_symbol, sequence[i_D].symbol)] = KTupleInfo()
+            active_k_tuples[(new_symbol, sequence[i_D].symbol)].count +=1
+
+
         #update list beginnings in active_k_tuples for old pairs 
         active_k_tuples[(B.symbol, C.symbol)].last = C.prev_k_tuple
         if i_A != -1:
-            if active_k_tuples[(A.symbol, B.symbol)].last == B.pos:                                         
+            if active_k_tuples[(sequence[i_A].symbol, B.symbol)].last == B.pos:                                         
                 #if this is the last A B in sequence:
-                active_k_tuples[(A.symbol, B.symbol)].last = B.prev_k_tuple
+                active_k_tuples[(sequence[i_A].symbol, B.symbol)].last = B.prev_k_tuple
         if i_D != -1:
-            if active_k_tuples[(C.symbol, D.symbol)].last == D.pos:
+            if active_k_tuples[(C.symbol, sequence[i_D].symbol)].last == sequence[i_D].pos:
                 #if this is the last C D in sequence:
-                active_k_tuples[(C.symbol, D.symbol)].last = D.prev_k_tuple
-        
+                active_k_tuples[(C.symbol, sequence[i_D].symbol)].last = sequence[i_D].prev_k_tuple
+
         #update list beginnings in active_k_tuples for new pairs 
         #this can be done when inserting them into active_k_tuples - this is just dumb, unoptimized version
         if i_A != -1:
-            if active_k_tuples[(A.symbol, new_symbol)].last  == -1:
-                active_k_tuples[(A.symbol, new_symbol)].last = C.pos
+            if active_k_tuples[(sequence[i_A].symbol, new_symbol)].last  == -1:
+                active_k_tuples[(sequence[i_A].symbol, new_symbol)].last = C.pos
         if i_D != -1:
-            if active_k_tuples[(new_symbol, D.symbol)].last  == -1:
-                active_k_tuples[(new_symbol, D.symbol)].last = D.pos
-            
-            
+            if active_k_tuples[(new_symbol, sequence[i_D].symbol)].last  == -1:
+                active_k_tuples[(new_symbol, sequence[i_D].symbol)].last = sequence[i_D].pos
+
+
         #update threading - old pairs
         if C.prev_k_tuple != -1:
             sequence[C.prev_k_tuple].next_k_tuple = -1
@@ -217,24 +218,24 @@ def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, n
             if B.next_k_tuple != -1:
                 sequence[B.next_k_tuple].prev_k_tuple = B.prev_k_tuple
         if i_D != -1:
-            if D.prev_k_tuple != -1:
-                sequence[B.prev_k_tuple].next_k_tuple = D.next_k_tuple
-            if D.next_k_tuple != -1:
-                sequence[B.next_k_tuple].prev_k_tuple = D.prev_k_tuple
-            
+            if sequence[i_D].prev_k_tuple != -1:
+                sequence[sequence[i_D].prev_k_tuple].next_k_tuple = sequence[i_D].next_k_tuple
+            if sequence[i_D].next_k_tuple != -1:
+                sequence[sequence[i_D].next_k_tuple].prev_k_tuple = sequence[i_D].prev_k_tuple
+
         #update threading - new pairs 
         if i_A != -1:
-            C.next_k_tuple = active_k_tuples[(A.symbol, new_symbol)].first
+            C.next_k_tuple = active_k_tuples[(sequence[i_A].symbol, new_symbol)].first
         if i_D != -1:
-            D.next_k_tuple = active_k_tuples[(new_symbol, D.symbol)].first
+            sequence[i_D].next_k_tuple = active_k_tuples[(new_symbol, sequence[i_D].symbol)].first
         C.prev_k_tuple = -1
-        D.prev_k_tuple = -1 
-        
+        sequence[i_D].prev_k_tuple = -1 
+
         #update positions of the first elements of the lists
         if i_A != -1:
-            active_k_tuples[(A.symbol, new_symbol)].first = C.pos
+            active_k_tuples[(sequence[i_A].symbol, new_symbol)].first = C.pos
         if i_D != -1:
-            active_k_tuples[(new_symbol, D.symbol)].first = D.pos
+            active_k_tuples[(new_symbol, sequence[i_D].symbol)].first = sequence[i_D].pos
         #redundant - nobody cares about first element of the removed list 
         if active_k_tuples[(B.symbol, C.symbol)].first == C.pos:
             active_k_tuples[(B.symbol, C.symbol)].first = -1
@@ -252,26 +253,27 @@ def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, n
             B.next_k_tuple = B.pos+1
         else:
             B.next_k_tuple = sequence[B.pos+1].next_k_tuple
-        
-        
+
+
         #change symbols
         B.symbol = NAS
         C.symbol = new_symbol
-    
+
+        #FOR TESTING!!!! 
+        break
+
     #update queues
 
 
-# # 
-
 # # tests
 
-# In[117]:
+# In[19]:
 
 
 from pprint import pprint
 
 
-# In[118]:
+# In[20]:
 
 
 def debug(string, k_tuple, new_symbol):
@@ -307,25 +309,29 @@ def debug(string, k_tuple, new_symbol):
     SequenceElement.print_list(sequence)
     print("-"*32)
 
-debug("012312012", (1,2), 4)
 
-
-# In[82]:
-
-
-debug("012012", (1,2), 3)
-
-
-# In[77]:
+# In[21]:
 
 
 debug("01", (0,1), 3)
 
 
-# In[63]:
+# In[22]:
 
 
-string_to_symbol_list("ala ma kota")
+debug("0101", (0,1), 3)
+
+
+# In[23]:
+
+
+debug("01201", (0,1), 3)
+
+
+# In[24]:
+
+
+debug("012012", (0,1), 3) #ERROR! NEXT TUPLE FOR SEQ[2] SHOULD BE -1
 
 
 # In[65]:

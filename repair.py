@@ -7,7 +7,7 @@
 #!jupyter nbconvert --to='script' repair.ipynb
 
 
-# In[1]:
+# In[2]:
 
 
 def string_to_symbol_list(string):
@@ -24,47 +24,65 @@ def string_to_symbol_list(string):
     return (symbol_list, char_to_symbol_dict)
 
 
-# In[2]:
+# In[31]:
 
 
 #assuming sequence goes left to right 
 class KTupleInfo:
-    def __init__(self):
-        self.count = 0
-        self.last = -1      #the rightmost pair
-        self.first = -1     #the leftmost pair
-        self.pos_in_queue = -1
+    def __init__(self, count=0, last=-1, first=-1, pos_in_queue=-1):
+        self.count = count
+        self.last = last
+        self.first = first
+        self.pos_in_queue = pos_in_queue
 
     @classmethod
-    def print_dict(cls, items):
-        print(f"{'Key':<6} {'Count':<6} {'Last':<6} {'PosInQueue':<12}")
-        print("-" * 32)
+    def get_print_lines(cls, items):
+        lines = [f"{'Key':<6} {'Count':<6} {'Last':<6} {'PosInQueue':<12}",
+                 "-" * 32]
         for i, item in items.items():
-            print(f"{str(i):<6} {item.count:<6} {item.last:<6} {item.pos_in_queue:<12}")
+            lines.append(f"{str(i):<6} {item.count:<6} {item.last:<6} {item.pos_in_queue:<12}")
+        return lines
 
     def __repr__(self):
         return f"KTupleInfo(count={self.count}, last={self.last}, pos_in_queue={self.pos_in_queue})"
 
+    def __eq__(self, other):
+        if not isinstance(other, KTupleInfo):
+            return NotImplemented
+        return (self.count == other.count and
+                self.last == other.last and
+                # self.first == other.first and
+                self.pos_in_queue == other.pos_in_queue)
+
+
+
 
 class SequenceElement:
-    def __init__(self):
-        self.symbol = None
-        self.pos = -1
-        self.prev_k_tuple = -1
-        self.next_k_tuple = -1
+    def __init__(self, symbol=None, pos=-1, prev_k_tuple=-1, next_k_tuple=-1):
+        self.symbol = symbol
+        self.pos = pos
+        self.prev_k_tuple = prev_k_tuple
+        self.next_k_tuple = next_k_tuple
 
     @classmethod
-    def print_list(cls, items):
-        print(f"{'Index':<6} {'Symbol':<10} {'Pos':<6} {'PrevKTuple':<12} {'NextKTuple':<12}")
-        print("-" * 50)
+    def get_print_lines(cls, items):
+        lines = [f"{'Index':<6} {'Symbol':<10} {'Pos':<6} {'PrevKTuple':<12} {'NextKTuple':<12}",
+                 "-" * 50]
         for i, item in enumerate(items):
-            print(f"{str(i):<6} {str(item.symbol):<10} {item.pos:<6} {str(item.prev_k_tuple):<12} {str(item.next_k_tuple):<12}")
+            lines.append(f"{str(i):<6} {str(item.symbol):<10} {item.pos:<6} {str(item.prev_k_tuple):<12} {str(item.next_k_tuple):<12}")
+        return lines
 
     def __repr__(self):
         return (f"SequenceElement(symbol={self.symbol}, prev_k_tuple={self.prev_k_tuple}, pos={self.pos}, "
                 f"next_k_tuple={self.next_k_tuple})")
 
-
+    def __eq__(self, other):
+        if not isinstance(other, SequenceElement):
+            return NotImplemented
+        return (self.symbol == other.symbol and
+                self.pos == other.pos and
+                self.prev_k_tuple == other.prev_k_tuple and
+                self.next_k_tuple == other.next_k_tuple)
 
 
 def construct_active_k_tuples_and_sequence(symbol_list, k):
@@ -108,7 +126,7 @@ def construct_active_k_tuples_and_sequence(symbol_list, k):
     return sequence, active_k_tuples
 
 
-# In[3]:
+# In[32]:
 
 
 # we use a dict based on priorities to manage priority queue
@@ -126,7 +144,7 @@ def construct_priority_queue(active_k_tuples):
     return priority_queue
 
 
-# In[18]:
+# In[71]:
 
 
 def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, new_symbol,k):
@@ -151,7 +169,7 @@ def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, n
         elif sequence[node.pos+1].symbol != NAS:
             return node.pos+1
         else:
-            return sequence[node.pos+1].next
+            return sequence[node.pos+1].next_k_tuple
 
     # assumming sequence = ... A B C D ... 
     # where (B, C) is the pair to be replaced
@@ -189,14 +207,14 @@ def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, n
 
         #update list beginnings in active_k_tuples for old pairs 
         active_k_tuples[(B.symbol, C.symbol)].last = C.prev_k_tuple
-        if i_A != -1:
-            if active_k_tuples[(sequence[i_A].symbol, B.symbol)].last == B.pos:                                         
-                #if this is the last A B in sequence:
-                active_k_tuples[(sequence[i_A].symbol, B.symbol)].last = B.prev_k_tuple
         if i_D != -1:
             if active_k_tuples[(C.symbol, sequence[i_D].symbol)].last == sequence[i_D].pos:
                 #if this is the last C D in sequence:
                 active_k_tuples[(C.symbol, sequence[i_D].symbol)].last = sequence[i_D].prev_k_tuple
+        if i_A != -1:
+            if active_k_tuples[(sequence[i_A].symbol, B.symbol)].last == B.pos:                                         
+                #if this is the last A B in sequence:
+                active_k_tuples[(sequence[i_A].symbol, B.symbol)].last = B.prev_k_tuple
 
         #update list beginnings in active_k_tuples for new pairs 
         #this can be done when inserting them into active_k_tuples - this is just dumb, unoptimized version
@@ -224,10 +242,18 @@ def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, n
                 sequence[sequence[i_D].next_k_tuple].prev_k_tuple = sequence[i_D].prev_k_tuple
 
         #update threading - new pairs 
+            # WATCHOUT!!! PROBLEM WITH first WHEN NOT RUNNING THE CODE IN LOOP 
+            # we can simulate the loop with the new pairs already existing in the sequence
+            # but those do not have .first configured properly, instead they have -1
+            # so newly added AE/ED do not point to AE/ED already present in the sequence
         if i_A != -1:
             C.next_k_tuple = active_k_tuples[(sequence[i_A].symbol, new_symbol)].first
+            if active_k_tuples[(sequence[i_A].symbol, new_symbol)].first != -1:
+                sequence[active_k_tuples[(sequence[i_A].symbol, new_symbol)].first].prev_k_tuple = C.pos
         if i_D != -1:
             sequence[i_D].next_k_tuple = active_k_tuples[(new_symbol, sequence[i_D].symbol)].first
+            if active_k_tuples[(new_symbol, sequence[i_D].symbol)].first != -1:
+                sequence[active_k_tuples[(new_symbol, sequence[i_D].symbol)].first].prev_k_tuple = i_D
         C.prev_k_tuple = -1
         sequence[i_D].prev_k_tuple = -1 
 
@@ -259,122 +285,7 @@ def replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, n
         B.symbol = NAS
         C.symbol = new_symbol
 
-        #FOR TESTING!!!! 
-        break
-
     #update queues
-
-
-# # tests
-
-# In[19]:
-
-
-from pprint import pprint
-
-
-# In[20]:
-
-
-def debug(string, k_tuple, new_symbol):
-    sequence, active_k_tuples = construct_active_k_tuples_and_sequence(string_to_symbol_list(string)[0], 2)
-    priority_queue = construct_priority_queue(active_k_tuples)
-    # print("-"*32)
-    # print("active_k_tuples before")
-    # print("-"*32)
-    # KTupleInfo.print_dict(active_k_tuples)
-    # print("-"*32)
-    # print("priority queue before")
-    # print("-"*32)
-    # print(priority_queue)
-    # print("-"*32)
-    print("sequence before")
-    print("-"*32)
-    SequenceElement.print_list(sequence)
-    print("-"*32)
-
-    replace_active_k_tuple(priority_queue, active_k_tuples, sequence, k_tuple, new_symbol, 2)
-
-    # print("-"*32)
-    # print("active_k_tuples after")
-    # print("-"*32)
-    # KTupleInfo.print_dict(active_k_tuples)
-    # print("-"*32)
-    # print("priority queue after")
-    # print("-"*32)
-    # print(priority_queue)
-    # print("-"*32)
-    print("sequence after")
-    print("-"*32)
-    SequenceElement.print_list(sequence)
-    print("-"*32)
-
-
-# In[21]:
-
-
-debug("01", (0,1), 3)
-
-
-# In[22]:
-
-
-debug("0101", (0,1), 3)
-
-
-# In[23]:
-
-
-debug("01201", (0,1), 3)
-
-
-# In[24]:
-
-
-debug("012012", (0,1), 3) #ERROR! NEXT TUPLE FOR SEQ[2] SHOULD BE -1
-
-
-# In[65]:
-
-
-s, a = construct_active_k_tuples_and_sequence(string_to_symbol_list("0101")[0], 2)
-SequenceElement.print_list(s)
-KTupleInfo.print_dict(a)
-
-
-# In[66]:
-
-
-s, a = construct_active_k_tuples_and_sequence(string_to_symbol_list("000")[0], 2)
-SequenceElement.print_list(s)
-KTupleInfo.print_dict(a)
-
-
-# In[67]:
-
-
-s, a = construct_active_k_tuples_and_sequence(string_to_symbol_list("012012")[0], 2)
-SequenceElement.print_list(s)
-KTupleInfo.print_dict(a)
-
-
-# In[11]:
-
-
-from pprint import pprint
-
-
-# In[69]:
-
-
-sequence, active_k_tuples = construct_active_k_tuples_and_sequence(string_to_symbol_list("012012")[0], 2)
-print("active_k_tuples before")
-KTupleInfo.print_dict(active_k_tuples)
-priority_queue = construct_priority_queue(active_k_tuples)
-print("active_k_tuples after")
-KTupleInfo.print_dict(active_k_tuples)
-print("priority queue")
-pprint(priority_queue)
 
 
 # In[ ]:

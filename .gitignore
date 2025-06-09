@@ -1,0 +1,6 @@
+data
+res
+__pycache__
+.ipynb_checkpoints
+*.py
+**.swp
